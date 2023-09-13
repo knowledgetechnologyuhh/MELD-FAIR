@@ -1,0 +1,17 @@
+--extra-index-url https://download.pytorch.org/whl/cu118
+insightface
+num2words
+numpy
+onnxruntime-gpu
+opencv-python
+pandas
+Pillow
+psutil
+scikit_learn
+scipy
+sox
+tensorboard
+torch
+torchaudio
+torchvision
+transformers
