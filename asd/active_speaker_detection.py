@@ -25,7 +25,7 @@ def get_asd_scores(asd_model, spec_transform, melscale_transform, tf, device, sp
     
     audio_utterance_filepath = os.path.join(cfg.meld_realigned_extracted_audio_folders[split], f"000{dia_id}"[-4 :], f"dia{dia_id}_utt{utt_id}.wav")
     audio_waveform = audio_processor.load_and_resample_audio_file(audio_utterance_filepath, device, target_sr = cfg.sr)
-    audio_feature = audio_processor.extract_MFCC(audio_utterance_filepath, spec_transform, melscale_transform, device)
+    audio_feature = audio_processor.extract_MFCC(audio_waveform, spec_transform, melscale_transform, device)
     
     face_tracks = {trk_idx : ([], []) for trk_idx in df_track_frame_bboxes["Track ID"].unique()}
     
@@ -127,56 +127,56 @@ def select_highest_scoring_tracks(all_track_scores):
 
 
 def detect_active_speakers():
-	asd_model = talkNet()
-	asd_model.loadParameters(cfg.talknet_pretrained_model_path)
-	device = "cpu" if torch.cuda.is_available() else "cuda"
-	asd_model = asd_model.to(device)
-	asd_model.model = asd_model.model.to(device)
-	asd_model.model = asd_model.model.to(device)
-	asd_model.lossAV = asd_model.lossAV.to(device)
-	asd_model.eval()
-
-	tf = TVT.Compose([
-		TVT.Grayscale(),
-		TVT.Resize((224, 224)),
-		TVT.CenterCrop(112),
-		TVT.ToTensor(),
-		TVT.Normalize((0,), (1 / 255,))
-	])
-
-	spec_transform = TAT.Spectrogram(
-		n_fft = cfg.n_fft,
-		win_length = int(cfg.win_length * cfg.sr),
-		hop_length = int(cfg.winstep * cfg.sr),
-		window_fn = torch.ones
-	).to(device)
-
-	melscale_transform = TAT.MelScale(
-		n_mels = cfg.n_mels,
-		sample_rate = cfg.sr,
-		n_stft = cfg.n_fft // 2 + 1,
-		mel_scale = "htk"
-	).to(device)
-
-	df_allfacetracks = pd.read_csv(cfg.facetracks_csv)
-	df_active_speaker_facetracks = pd.DataFrame(columns = ["Split", "Dialogue ID", "Utterance ID", "Frame Number", "X Left", "Y Top", "X Right", "Y Bottom"])
-	
-	for split in df_allfacetracks["Split"].unique():
-		for dia_id in df_allfacetracks[df_allfacetracks["Split"] == split]["Dialogue ID"].unique():
-			for utt_id in df_allfacetracks[(df_allfacetracks["Split"] == split) & (df_allfacetracks["Dialogue ID"] == dia_id)]["Utterance ID"].unique():
-				df_track_frame_bboxes = df_allfacetracks[(df_allfacetracks["Split"] == split) & (df_allfacetracks["Dialogue ID"] == dia_id) & (df_allfacetracks["Utterance ID"] == utt_id)]
-				face_track_scores = get_asd_scores(asd_model, spec_transform, melscale_transform, tf, device, split, dia_id, utt_id, df_track_frame_bboxes, adjustment_factor = 2.)
-				frame_track_association = select_highest_scoring_tracks(face_track_scores)
-				
-				# print(f"{split.upper()} - ({dia_id}, {utt_id}): {len(frame_track_association)} out of {len(df_track_frame_bboxes['Frame Number'].unique())} frames with associated active speaker (out of {len(df_track_frame_bboxes['Track ID'].unique())} tracks with potential active speakers).")
-				for frame, track in frame_track_association:
-					x_left, y_top, x_right, y_bottom = df_track_frame_bboxes[(df_track_frame_bboxes["Track ID"] == track) & (df_track_frame_bboxes["Frame Number"] == frame)][["X Left", "Y Top", "X Right", "Y Bottom"]].values[0]
-					# print(f"\tFrame {frame} - Track {track}: Coords {(x_left, y_top, x_right, y_bottom)}")
-					
-					df_active_speaker_facetracks.loc[len(df_active_speaker_facetracks)] = [split, dia_id, utt_id, frame, x_left, y_top, x_right, y_bottom]
-				# print()
-	
-	df_active_speaker_facetracks.to_csv(cfg.active_speaker_bbox_csv, index = False)
+    asd_model = talkNet()
+    asd_model.loadParameters(cfg.talknet_pretrained_model_path)
+    device = "cpu" if torch.cuda.is_available() else "cuda"
+    asd_model = asd_model.to(device)
+    asd_model.model = asd_model.model.to(device)
+    asd_model.model = asd_model.model.to(device)
+    asd_model.lossAV = asd_model.lossAV.to(device)
+    asd_model.eval()
+    
+    tf = TVT.Compose([
+        TVT.Grayscale(),
+        TVT.Resize((224, 224)),
+        TVT.CenterCrop(112),
+        TVT.ToTensor(),
+        TVT.Normalize((0,), (1 / 255,))
+    ])
+    
+    spec_transform = TAT.Spectrogram(
+        n_fft = cfg.n_fft,
+        win_length = int(cfg.win_length * cfg.sr),
+        hop_length = int(cfg.winstep * cfg.sr),
+        window_fn = torch.ones
+    ).to(device)
+    
+    melscale_transform = TAT.MelScale(
+        n_mels = cfg.n_mels,
+        sample_rate = cfg.sr,
+        n_stft = cfg.n_fft // 2 + 1,
+        mel_scale = "htk"
+    ).to(device)
+    
+    df_allfacetracks = pd.read_csv(cfg.facetracks_csv)
+    df_active_speaker_facetracks = pd.DataFrame(columns = ["Split", "Dialogue ID", "Utterance ID", "Frame Number", "X Left", "Y Top", "X Right", "Y Bottom"])
+    
+    for split in df_allfacetracks["Split"].unique():
+        for dia_id in df_allfacetracks[df_allfacetracks["Split"] == split]["Dialogue ID"].unique():
+            for utt_id in df_allfacetracks[(df_allfacetracks["Split"] == split) & (df_allfacetracks["Dialogue ID"] == dia_id)]["Utterance ID"].unique():
+                df_track_frame_bboxes = df_allfacetracks[(df_allfacetracks["Split"] == split) & (df_allfacetracks["Dialogue ID"] == dia_id) & (df_allfacetracks["Utterance ID"] == utt_id)]
+                face_track_scores = get_asd_scores(asd_model, spec_transform, melscale_transform, tf, device, split, dia_id, utt_id, df_track_frame_bboxes, adjustment_factor = 2.)
+                frame_track_association = select_highest_scoring_tracks(face_track_scores)
+                
+                # print(f"{split.upper()} - ({dia_id}, {utt_id}): {len(frame_track_association)} out of {len(df_track_frame_bboxes['Frame Number'].unique())} frames with associated active speaker (out of {len(df_track_frame_bboxes['Track ID'].unique())} tracks with potential active speakers).")
+                for frame, track in frame_track_association:
+                    x_left, y_top, x_right, y_bottom = df_track_frame_bboxes[(df_track_frame_bboxes["Track ID"] == track) & (df_track_frame_bboxes["Frame Number"] == frame)][["X Left", "Y Top", "X Right", "Y Bottom"]].values[0]
+                    # print(f"\tFrame {frame} - Track {track}: Coords {(x_left, y_top, x_right, y_bottom)}")
+                    
+                    df_active_speaker_facetracks.loc[len(df_active_speaker_facetracks)] = [split, dia_id, utt_id, frame, x_left, y_top, x_right, y_bottom]
+                # print()
+    
+    df_active_speaker_facetracks.to_csv(cfg.active_speaker_bbox_csv, index = False)
 
 
 if __name__ == "__main__":

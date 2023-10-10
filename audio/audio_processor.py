@@ -15,7 +15,7 @@ from .. import config as cfg
 
 
 def load_and_resample_audio_file(filename, device, target_sr = 16_000):
-    waveform, sr = torchaudio.load(file)
+    waveform, sr = torchaudio.load(filename)
     waveform = waveform[0].to(device)
     waveform = TAF.resample(waveform, sr, target_sr)
     
