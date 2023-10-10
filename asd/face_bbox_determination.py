@@ -1,5 +1,6 @@
 import os
 import sys
+import warnings
 import glob
 import cv2
 import numpy as np
@@ -12,6 +13,8 @@ from insightface.data import get_image as ins_get_image
 
 from .. import config as cfg
 
+
+warnings.filterwarnings("ignore") # Suppresses warning messages generated during the use of insightface
 
 def extract_all_facetracks():
     app = FaceAnalysis(providers = ["CUDAExecutionProvider", "CPUExecutionProvider"])
@@ -139,7 +142,8 @@ def extract_all_facetracks():
                         y1 = y_max
                     
                     facetracks_df.loc[len(facetracks_df.index)] = [s, dia_id, utt_id, trk_idx, frame_idx, x0, y0, x1, y1]
-            
+    
+    os.makedirs(os.path.dirname(cfg.facetracks_csv), exist_ok = True)
     facetracks_df.to_csv(cfg.facetracks_csv, index = False)
     print(f"Bounding box information on the face of every person of every video has been stored at {cfg.facetracks_csv}.")
 

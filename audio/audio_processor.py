@@ -23,19 +23,19 @@ def load_and_resample_audio_file(filename, device, target_sr = 16_000):
 
 
 def get_spec_and_melscale_transforms(device):
-	spec_transform = TAT.Spectrogram(
-		n_fft = cfg.n_fft,
-		win_length = int(cfg.win_length * cfg.sr),
-		hop_length = int(cfg.winstep * cfg.sr),
-		window_fn = torch.ones
-	).to(device)
+    spec_transform = TAT.Spectrogram(
+        n_fft = cfg.n_fft,
+        win_length = int(cfg.win_length * cfg.sr),
+        hop_length = int(cfg.winstep * cfg.sr),
+        window_fn = torch.ones
+    ).to(device)
 
-	melscale_transform = TAT.MelScale(
-		n_mels = cfg.n_mels,
-		sample_rate = cfg.sr,
-		n_stft = cfg.n_fft // 2 + 1,
-		mel_scale = "htk"
-	).to(device)
+    melscale_transform = TAT.MelScale(
+        n_mels = cfg.n_mels,
+        sample_rate = cfg.sr,
+        n_stft = cfg.n_fft // 2 + 1,
+        mel_scale = "htk"
+    ).to(device)
     
     return spec_transform, melscale_transform
 

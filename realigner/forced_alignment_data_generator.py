@@ -243,16 +243,9 @@ def generate_forced_alignment_data():
     labels = bundle.get_labels()
     dictionary = {c: i for i, c in enumerate(labels)}
     
-    no_video_cases = []
-    alignment_not_possible_cases = []
-    
     realignment_df = pd.DataFrame(columns = ["Split", "Dialogue ID", "Utterance ID", "Original Dialogue ID", "Original Utterance ID", "Start Time", "End Time"])
     
     for s in cfg.splits:
-        #FIXME
-        if s != "train":
-            continue
-        
         print(f"Split {s.upper()}:")
         
         df = pd.read_csv(cfg.meld_original_csv[s])
@@ -289,10 +282,6 @@ def generate_forced_alignment_data():
         
         for idx, _ in df.iterrows():
             dia_id = df.loc[df.index[idx], "Dialogue_ID"]
-            #FIXME
-            if dia_id not in (0, 1, 2):
-                continue
-            
             utt_id = df.loc[df.index[idx], "Utterance_ID"]
             
             if dia_id > 0 and dia_id % 100 == 0 and utt_id == 0:
@@ -356,15 +345,12 @@ def generate_forced_alignment_data():
         
         realignment_data_df = df.filter(["Sr No.", "Utterance", "Speaker", "Emotion", "Dialogue_ID", "Utterance_ID", "Corrected Dialogue_ID", "Corrected Utterance_ID", "Season", "Episode", "StartTime", "EndTime"], axis = 1)
         realignment_data_df.rename(columns={"Dialogue_ID": "Original Dialogue_ID", "Utterance_ID": "Original Utterance_ID", "Corrected Dialogue_ID": "Dialogue_ID", "Corrected Utterance_ID": "Utterance_ID"})
+        os.makedirs(os.path.dirname(cfg.meld_realigned_csv[s]), exist_ok = True)
         realignment_data_df.to_csv(cfg.meld_realigned_csv[s], index = False)
         
         print("\tDialogues:")
         for idx_first_utt, _ in df[df["Corrected Utterance_ID"] == 0].iterrows():
             corr_dia_id = df.loc[df.index[idx_first_utt], "Corrected Dialogue_ID"]
-            #FIXME
-            if corr_dia_id not in (0, 1, 2):
-                continue
-            
             # print(f"\t\tFirst utterance of dialogue {corr_dia_id} - Row {idx_first_utt} of the {s} split CSV data")
             if corr_dia_id > 0 and corr_dia_id % 100 == 0:
                 print(f"The proper forced alignment data for the first {corr_dia_id} dialogues of {s} split have been generated.")
@@ -408,8 +394,7 @@ def generate_forced_alignment_data():
             try:
                 path = backtrack(trellis, emission, tokens)
             except ValueError as e:
-                print(f"\t\t\t{e}")
-                alignment_not_possible_cases.append((s, corr_dia_id))
+                print(f"\t\t\tFailure during generation of alignment data of dialogue #{corr_dia_id} of split {s}.")
                 continue
             segments = merge_repeats(transcript, path)
             word_segments = merge_words(segments)
@@ -462,7 +447,8 @@ def generate_forced_alignment_data():
                         if end_ts > 2 * cfg.sr / dia_fps:
                             orig_dia_id, orig_utt_id = df.loc[df[(df["Corrected Dialogue_ID"] == corr_dia_id) & (df["Corrected Utterance_ID"] == end_at[1])].index[0], ["Dialogue_ID", "Utterance_ID"]].values
                             realignment_df.loc[len(realignment_df)] = [s, corr_dia_id, idx_sent, orig_dia_id, orig_utt_id, 0, end_ts / cfg.sr]
-                
+    
+    os.makedirs(os.path.dirname(cfg.realignment_timestamps_csv, exist_ok = True)
     realignment_df.to_csv(cfg.realignment_timestamps_csv, float_format = "%.7f", index = False)
 
 

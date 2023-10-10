@@ -176,6 +176,7 @@ def detect_active_speakers():
                     df_active_speaker_facetracks.loc[len(df_active_speaker_facetracks)] = [split, dia_id, utt_id, frame, x_left, y_top, x_right, y_bottom]
                 # print()
     
+    os.makedirs(os.path.dirname(cfg.active_speaker_bbox_csv), exist_ok = True)
     df_active_speaker_facetracks.to_csv(cfg.active_speaker_bbox_csv, index = False)
 
 
